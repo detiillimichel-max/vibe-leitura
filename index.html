@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vibe Leitura - BJ Perdões</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
+        #tela-identidade {
+            position: absolute; width: 100%; height: 100%; background: #121212;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 1000; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); color: white;
+        }
+        #foto { width: 120px; height: 120px; border-radius: 50%; border: 3px solid #00ff00; background: #333; }
+        #map { width: 100%; height: 100%; position: absolute; z-index: 1; }
+        .gaveta {
+            position: fixed; bottom: -300px; left: 0; width: 100%; background: white;
+            height: 280px; z-index: 2000; transition: bottom 0.3s; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="tela-identidade" onclick="abrirMapa()">
+        <div id="foto"></div>
+        <h2>MICHEL</h2>
+        <p>Rota 8 - Bom Jesus dos Perdões</p>
+        <p style="font-size: 12px; opacity: 0.5;">Toque para iniciar</p>
+    </div>
+
+    <div id="map"></div>
+
+    <div id="gaveta" class="gaveta">
+        <h3 id="rua-nome">Selecionar Imóvel</h3>
+        <input type="number" id="leitura" placeholder="Leitura do Hidrômetro" style="width: 100%; padding: 15px; font-size: 18px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px;">
+        <textarea id="obs" placeholder="Observações..." style="width: 100%; height: 60px; padding: 10px; border-radius: 8px;"></textarea>
+        <button onclick="salvar()" style="width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 8px; margin-top: 10px; font-weight: bold;">SALVAR LEITURA</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([-23.1333, -46.3000], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        function abrirMapa() {
+            document.getElementById('tela-identidade').style.transform = 'translateY(-100%)';
+            map.locate({setView: true, watch: true, maxZoom: 18});
+        }
+
+        map.on('locationfound', (e) => {
+            const radius = e.accuracy / 2;
+            L.circle(e.latlng, radius).addTo(map);
+        });
+
+        // Simulação de ponto da Rota 8 (Avenida Bom Jesus)
+        const rota8 = L.polyline([
+            [-23.1330, -46.3005],
+            [-23.1345, -46.3015]
+        ], {color: '#00ff00', weight: 8}).addTo(map);
+
+        rota8.on('click', function(e) {
+            document.getElementById('rua-nome').innerText = "Rua da Rota 8";
+            document.getElementById('gaveta').style.bottom = '0';
+        });
+
+        function salvar() {
+            alert("Leitura Salva! A rua ficará amarela amanhã com o Firebase.");
+            document.getElementById('gaveta').style.bottom = '-300px';
+        }
+    </script>
+</body>
+</html>
+
