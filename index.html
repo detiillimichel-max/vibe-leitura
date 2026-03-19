@@ -3,85 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vibe Leitura - Rota 8</title>
+    <title>Vibe Leitura - OIO ONE</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; background: #121212; }
         #tela-identidade {
             position: absolute; width: 100%; height: 100%; background: #121212;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 1000; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); color: white;
+            z-index: 1000; transition: transform 0.6s ease; color: white; text-align: center;
         }
-        #foto { width: 120px; height: 120px; border-radius: 50%; border: 3px solid #00ff00; background: url('https://github.com/detillimichel-max.png') center/cover; }
+        #foto { width: 130px; height: 130px; border-radius: 50%; border: 4px solid #007bff; background: url('https://github.com/detillimichel-max.png') center/cover; margin-bottom: 15px; }
         #map { width: 100%; height: 100%; position: absolute; z-index: 1; }
-        .gaveta {
-            position: fixed; bottom: -350px; left: 0; width: 100%; background: white;
-            height: 320px; z-index: 2000; transition: bottom 0.3s; border-radius: 25px 25px 0 0; padding: 20px; box-sizing: border-box; box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
+        
+        /* SALTO QUÂNTICO (Botões de Rotas no Topo) */
+        #salto-quantico {
+            position: absolute; top: 15px; left: 10px; right: 10px; z-index: 1500;
+            display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; pointer-events: auto;
         }
+        .mini-rota {
+            min-width: 45px; height: 45px; border-radius: 12px; color: white;
+            display: flex; align-items: center; justify-content: center; font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        /* GAVETA ERGONÔMICA */
+        .gaveta {
+            position: fixed; bottom: -420px; left: 0; width: 100%; background: #f8f9fa;
+            height: 400px; z-index: 2000; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 25px 25px 0 0; padding: 20px; box-sizing: border-box;
+        }
+        .btn-vibe { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; margin-bottom: 10px; cursor: pointer; }
+        .btn-camera { background: #343a40; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-salvar { background: #007bff; color: white; font-size: 16px; }
+        textarea, input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
     </style>
 </head>
 <body>
 
     <div id="tela-identidade" onclick="abrirMapa()">
         <div id="foto"></div>
-        <h2 style="letter-spacing: 2px;">MICHEL</h2>
-        <p>Rota 8 - Bom Jesus dos Perdões</p>
-        <p style="font-size: 12px; opacity: 0.5; margin-top: 20px;">Toque para iniciar</p>
+        <h2 style="margin:0;">MICHEL</h2>
+        <p style="color: #007bff; font-weight: bold;">Vibe Leitura</p>
+        <p style="font-size: 13px; opacity: 0.6;">Toque para carregar rotas</p>
     </div>
+
+    <div id="salto-quantico">
+        </div>
 
     <div id="map"></div>
 
     <div id="gaveta" class="gaveta">
         <div style="width: 40px; height: 5px; background: #ccc; border-radius: 10px; margin: 0 auto 15px;"></div>
-        <h3 id="rua-nome" style="color: #333; margin-bottom: 5px;">Rua Selecionada</h3>
-        <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Status: <span style="color: #28a745; font-weight: bold;">Pendente (Verde)</span></p>
+        <h3 id="rua-nome" style="margin: 0 0 15px 0; color: #333;">Selecione a Rua</h3>
         
-        <input type="number" id="leitura" placeholder="Leitura do Hidrômetro" style="width: 100%; padding: 15px; font-size: 18px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 12px; box-sizing: border-box;">
-        <textarea id="obs" placeholder="Observações (vazamento, cachorro...)" style="width: 100%; height: 50px; padding: 10px; border-radius: 12px; border: 1px solid #ddd; box-sizing: border-box;"></textarea>
+        <input type="number" id="leitura" placeholder="Leitura Atual">
         
-        <button onclick="salvar()" style="width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 12px; margin-top: 10px; font-weight: bold; font-size: 16px;">SALVAR NA MEMÓRIA</button>
+        <button class="btn-vibe btn-camera" onclick="document.getElementById('cam').click()">
+            📸 TIRAR FOTO DO HIDRÔMETRO
+        </button>
+        <input type="file" id="cam" accept="image/*" capture="environment" style="display:none">
+        
+        <textarea id="obs" placeholder="Alguma ideia ou problema (vazamento, etc)?"></textarea>
+        
+        <button class="btn-vibe btn-salvar" onclick="salvar()">CONCLUIR LEITURA</button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        const map = L.map('map').setView([-23.1337, -46.3015], 16);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-        function abrirMapa() {
-            document.getElementById('tela-identidade').style.transform = 'translateY(-100%)';
-            map.locate({setView: true, watch: true, maxZoom: 18});
-        }
-
-        map.on('locationfound', (e) => {
-            const radius = e.accuracy / 2;
-            if (window.userMarker) {
-                window.userMarker.setLatLng(e.latlng);
-            } else {
-                window.userMarker = L.circleMarker(e.latlng, {radius: 8, color: '#007bff', fillColor: '#007bff', fillOpacity: 1}).addTo(map);
-            }
-        });
-
-        // FUNÇÃO PARA CRIAR RUA CLICÁVEL
-        function criarRua(coords, nome) {
-            const linha = L.polyline(coords, {color: '#00ff00', weight: 10, opacity: 0.7}).addTo(map);
-            linha.on('click', function() {
-                document.getElementById('rua-nome').innerText = nome;
-                document.getElementById('gaveta').style.bottom = '0';
-            });
-        }
-
-        // CADASTRANDO RUAS DA ROTA 8
-        criarRua([[-23.1334, -46.3018], [-23.1345, -46.3014]], "Avenida Bom Jesus");
-        criarRua([[-23.1332, -46.3023], [-23.1328, -46.3015]], "Praça do Cruzeiro");
-        criarRua([[-23.1340, -46.3005], [-23.1350, -46.3000]], "Rua Belo Horizonte");
-
-        function salvar() {
-            alert("Sucesso! Registro salvo localmente. Próximo passo: Firebase.");
-            document.getElementById('gaveta').style.bottom = '-350px';
-        }
-
-        // Fechar gaveta ao clicar no mapa
-        map.on('click', () => { document.getElementById('gaveta').style.bottom = '-350px'; });
-    </script>
+    <script src="js/rotas-data.js"></script>
+    <script src="js/mapa.js"></script>
 </body>
 </html>
