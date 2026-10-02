@@ -2,6 +2,7 @@ const map=L.map("map",{zoomControl:false}).setView([-23.1337,-46.3015],16);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
 let camadaDelineacao=null,rotaSelecionadaId=null,ruaSelecionada=null,fotosPendentes=[],midiaAtual=null,gravador=null,streamVideo=null,chunksVideo=[],timerVideo=null,segundosVideo=0;
 let rastreamentoAtivo=false,watchGpsId=null,trilhaGps=[],distanciaGps=0,ultimoGps=null,trilhaLayer=null,gpsMarker=null;
+let camadasRuasRota=[],geometriasRotaCache=null;
 function gpsDist(a,b){const R=6371000,p=Math.PI/180,dLat=(b.lat-a.lat)*p,dLon=(b.lng-a.lng)*p,x=Math.sin(dLat/2)**2+Math.cos(a.lat*p)*Math.cos(b.lat*p)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
 function atualizarGpsPainel(){const t=document.getElementById("gps-track");if(!t)return;const acc=ultimoGps?.accuracy?Math.round(ultimoGps.accuracy)+" m":"—";const d=distanciaGps<1000?Math.round(distanciaGps)+" m":(distanciaGps/1000).toFixed(2)+" km";t.innerHTML=(rastreamentoAtivo?"🟢 GPS ATIVO":"⚪ GPS parado")+" · ±"+acc+" · "+d; t.classList.toggle("ativo",rastreamentoAtivo)}
 function salvarTrilhaGps(){localStorage.setItem("vibe-leitura-gps",JSON.stringify({points:trilhaGps,distance:distanciaGps,updatedAt:Date.now()}))}
@@ -14,16 +15,73 @@ function alternarRastreamentoGps(){rastreamentoAtivo?pararRastreamentoGps():inic
 
 const MES_ATUAL=()=>new Date().toISOString().slice(0,7);
 const coordenadasDasRotas={"ROTA 1":[[-23.1330,-46.3010],[-23.1340,-46.3020],[-23.1350,-46.3030]],"ROTA 2":[[-23.1320,-46.3015],[-23.1325,-46.3025],[-23.1330,-46.3035]],"ROTA 3":[[-23.1352,-46.3005],[-23.1358,-46.3012],[-23.1365,-46.3020]],"ROTA 4":[[-23.1340,-46.2990],[-23.1345,-46.2980],[-23.1350,-46.2970]],"ROTA 5":[[-23.1310,-46.3000],[-23.1315,-46.2990],[-23.1320,-46.2980]],"ROTA 6":[[-23.1360,-46.3040],[-23.1370,-46.3050],[-23.1380,-46.3060]],"ROTA 7":[[-23.1335,-46.3045],[-23.1340,-46.3055],[-23.1345,-46.3065]],"ROTA 8":[[-23.1310,-46.3050],[-23.1300,-46.3060],[-23.1290,-46.3070]],"ROTA 9":[[-23.1300,-46.3020],[-23.1285,-46.3015],[-23.1270,-46.3010]],"ROTA 10":[[-23.1370,-46.3000],[-23.1385,-46.2995],[-23.1400,-46.2990]],"ROTA 11":[[-23.1320,-46.3080],[-23.1310,-46.3090],[-23.1300,-46.3100]],"ROTA 12":[[-23.1350,-46.3080],[-23.1365,-46.3095],[-23.1380,-46.3110]],"ROTA 13":[[-23.1340,-46.3030],[-23.1325,-46.3035],[-23.1310,-46.3040]],"ROTA 14":[[-23.1380,-46.3020],[-23.1395,-46.3015],[-23.1410,-46.3010]],"ROTA 15":[[-23.1390,-46.3050],[-23.1405,-46.3055],[-23.1420,-46.3060]],"ROTA 16":[[-23.1305,-46.3040],[-23.1290,-46.3045],[-23.1275,-46.3050]],"ROTA 17":[[-23.1345,-46.2975],[-23.1360,-46.2970],[-23.1375,-46.2965]],"ROTA 18":[[-23.1325,-46.3115],[-23.1335,-46.3125],[-23.1345,-46.3135]],"ROTA 19":[[-23.1285,-46.3025],[-23.1270,-46.3020],[-23.1255,-46.3015]],"ROTA 20":[[-23.1375,-46.3085],[-23.1390,-46.3090],[-23.1405,-46.3095]]};
+const OVERPASS_URLS=["https://overpass-api.de/api/interpreter","https://lz4.overpass-api.de/api/interpreter"];
+const CACHE_GEOMETRIA_TTL=24*60*60*1000;
+const NORMALIZAR=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+function limparCamadasRuas(){camadasRuasRota.forEach(x=>map.removeLayer(x));camadasRuasRota=[]}
+function chaveCacheRota(id){return "vibe-leitura-geometria-"+id.replace(/\s+/g,"-").toLowerCase()}
+function lerCacheGeometria(id){try{const x=JSON.parse(localStorage.getItem(chaveCacheRota(id))||"null");if(x?.savedAt&&Date.now()-x.savedAt<CACHE_GEOMETRIA_TTL&&Array.isArray(x.ways))return x.ways}catch(e){}return null}
+function gravarCacheGeometria(id,ways){try{localStorage.setItem(chaveCacheRota(id),JSON.stringify({savedAt:Date.now(),ways}))}catch(e){}}
+function montarRegexNomes(ruas){return ruas.map(NORMALIZAR).filter(Boolean).sort((a,b)=>b.length-a.length).map(n=>n.replace(/[.*+?^()|[\]\\]/g,"\\function atualizarStatus(){")).join("|")}
+async function buscarGeometriasOSM(id){
+ const rota=bancoDeRotas[id],cached=lerCacheGeometria(id);if(cached)return cached;
+ const regex=montarRegexNomes(rota.ruas);if(!regex)return [];
+ const query='[out:json][timeout:45];way["highway"]["name"~"^('+regex+')$",i](-23.35,-46.55,-22.95,-46.15);out geom;';
+ let ultimoErro=null;
+ for(const endpoint of OVERPASS_URLS){try{const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body:"data="+encodeURIComponent(query)});if(!r.ok)throw new Error("HTTP "+r.status);const j=await r.json();const ways=(j.elements||[]).filter(x=>Array.isArray(x.geometry)&&x.geometry.length>1).map(x=>({id:x.id,name:x.tags?.name||"",nameKey:NORMALIZAR(x.tags?.name),geometry:x.geometry.map(p=>[p.lat,p.lon])}));if(ways.length){gravarCacheGeometria(id,ways);return ways}gravarCacheGeometria(id,[]);return []}catch(e){ultimoErro=e}}
+ console.warn("Não foi possível carregar geometria OSM:",ultimoErro);return [];
+}
+async function desenharRuasDaRota(id){
+ limparCamadasRuas();
+ const rota=bancoDeRotas[id];if(!rota)return;
+ const ways=geometriasRotaCache?.id===id?geometriasRotaCache.ways:await buscarGeometriasOSM(id);
+ geometriasRotaCache={id,ways};
+ const registros=await obterRegistrosDaRota(id,MES_ATUAL());
+ const feitas=new Set(registros.map(x=>x.rua).map(NORMALIZAR));
+ const porNome=new Map();
+ ways.forEach(w=>{const atual=porNome.get(w.nameKey)||[];atual.push(w);porNome.set(w.nameKey,atual)});
+ const bounds=[];
+ rota.ruas.forEach(rua=>{
+   const key=NORMALIZAR(rua),achados=porNome.get(key)||[];
+   achados.forEach(w=>{
+     const concluida=feitas.has(key);
+     const base=L.polyline(w.geometry,{color:concluida?"#00e676":"#7b8088",weight:9,opacity:.24,lineCap:"round",lineJoin:"round"}).addTo(map);
+     const linha=L.polyline(w.geometry,{color:concluida?"#00e676":"#b7bcc3",weight:5,opacity:.95,dashArray:"12 10",lineCap:"round",lineJoin:"round"}).addTo(map);
+     linha.bindTooltip((concluida?"🟢 ":"⚪ ")+rua+" — "+(concluida?"CONCLUÍDA":"PENDENTE"),{sticky:true});
+     camadasRuasRota.push(base,linha);w.geometry.forEach(p=>bounds.push(p));
+   });
+ });
+ return bounds;
+}
+async function atualizarProgressoRota(id){
+ const rota=bancoDeRotas[id];if(!rota)return;
+ const registros=await obterRegistrosDaRota(id,MES_ATUAL());
+ const feitas=new Set(registros.map(x=>NORMALIZAR(x.rua)));
+ const concluidas=rota.ruas.filter(r=>feitas.has(NORMALIZAR(r))).length;
+ const el=document.getElementById("rota-contador");if(el)el.textContent="Mês atual: "+MES_ATUAL()+" • "+concluidas+"/"+rota.ruas.length+" ruas concluídas • "+registros.length+" leituras";
+}
 function atualizarStatus(){const e=document.getElementById("status-offline");if(!navigator.onLine){e.textContent="● OFFLINE — DADOS LOCAIS";e.className="status-offline-mode"}else{e.textContent="● ONLINE";e.className="status-online"}}
 window.addEventListener("online",atualizarStatus);window.addEventListener("offline",atualizarStatus);
-function abrirMapa(){document.getElementById("tela-identidade").style.transform="translateY(-100%)";atualizarStatus();carregarTrilhaGps();desenharTrilhaGps();map.locate({setView:true,watch:true,maxZoom:18,enableHighAccuracy:true,maximumAge:5000,timeout:15000});rastreamentoAtivo=true;atualizarGpsPainel();renderizarMenuRotas();setTimeout(()=>lucide.createIcons(),50)}
-map.on("locationfound",e=>{registrarGps(e);if(window.userMarker)window.userMarker.setLatLng(e.latlng);else window.userMarker=L.circleMarker(e.latlng,{radius:8,color:"#fff",fillColor:"#007bff",fillOpacity:1,weight:3}).addTo(map)});
+function abrirMapa(){document.getElementById("tela-identidade").style.transform="translateY(-100%)";atualizarStatus();carregarTrilhaGps();desenharTrilhaGps();renderizarMenuRotas();setTimeout(()=>lucide.createIcons(),50);if(!rastreamentoAtivo)iniciarRastreamentoGps()}
+
 function abrirMenuRotas(){document.getElementById("menu-rotas").classList.add("aberto");document.getElementById("menu-overlay").classList.add("aberto")}
 function fecharMenuRotas(){document.getElementById("menu-rotas").classList.remove("aberto");document.getElementById("menu-overlay").classList.remove("aberto")}
 function renderizarMenuRotas(){const c=document.getElementById("lista-rotas-menu");c.innerHTML="";Object.keys(bancoDeRotas).forEach(id=>{const b=document.createElement("button");b.className="rota-menu-item"+(id===rotaSelecionadaId?" ativa":"");b.innerHTML='<span class="numero" style="background:'+bancoDeRotas[id].cor+'">'+id.replace("ROTA ","")+'</span><span>'+id+'<br><small style="opacity:.5">'+bancoDeRotas[id].ruas.length+' endereços</small></span>';b.onclick=()=>{selecionarRota(id);fecharMenuRotas()};c.appendChild(b)});lucide.createIcons()}
-async function selecionarRota(id){rotaSelecionadaId=id;ruaSelecionada=null;fotosPendentes=[];const rota=bancoDeRotas[id],pts=coordenadasDasRotas[id];if(camadaDelineacao)map.removeLayer(camadaDelineacao);if(pts){camadaDelineacao=L.polyline(pts,{color:rota.cor,weight:12,opacity:.8}).addTo(map);map.fitBounds(camadaDelineacao.getBounds(),{padding:[30,120]})}
-document.getElementById("rua-nome").textContent=id;document.getElementById("rua-nome").style.color=rota.cor;document.getElementById("rota-badge").textContent=id+" • "+rota.ruas.length+" ENDEREÇOS";document.getElementById("rota-contador").textContent="Mês atual: "+MES_ATUAL();document.getElementById("busca-rua").value="";document.getElementById("gaveta").classList.add("aberta");document.getElementById("painel-rua").classList.add("oculto");renderizarMenuRotas();await renderizarListaRuas()}
-async function renderizarListaRuas(filtro=""){if(!rotaSelecionadaId)return;const rota=bancoDeRotas[rotaSelecionadaId],registros=await obterRegistrosDaRota(rotaSelecionadaId,MES_ATUAL()),salvos=new Set(registros.map(x=>x.rua)),termo=filtro.trim().toLowerCase(),lista=rota.ruas.filter(r=>r.toLowerCase().includes(termo)),c=document.getElementById("lista-ruas");c.innerHTML="";lista.forEach((rua,i)=>{const item=document.createElement("div");item.className="item-rua"+(rua===ruaSelecionada?" selecionada":"");item.innerHTML='<span class="check">'+(salvos.has(rua)?"✔️":"○")+'</span><button>'+String(i+1)+". "+rua+'</button><button class="pin" title="Abrir navegação"><i data-lucide="map-pin"></i></button>';item.querySelector("button").onclick=()=>selecionarRua(rua);item.querySelector(".pin").onclick=()=>abrirNavegacao(rua);c.appendChild(item)});lucide.createIcons()}
+async function selecionarRota(id){
+ rotaSelecionadaId=id;ruaSelecionada=null;fotosPendentes=[];
+ const rota=bancoDeRotas[id];
+ document.getElementById("rua-nome").textContent=id;document.getElementById("rua-nome").style.color=rota.cor;
+ document.getElementById("rota-badge").textContent=id+" • "+rota.ruas.length+" ENDEREÇOS";
+ document.getElementById("rota-contador").textContent="⏳ Carregando tracejado das ruas...";
+ document.getElementById("busca-rua").value="";document.getElementById("gaveta").classList.add("aberta");document.getElementById("painel-rua").classList.add("oculto");
+ renderizarMenuRotas();
+ const bounds=await desenharRuasDaRota(id);
+ if(bounds.length){map.fitBounds(L.latLngBounds(bounds),{padding:[30,120]})}
+ else if(!navigator.onLine){document.getElementById("rota-contador").textContent="📴 Sem internet — tracejado desta rota ainda não foi armazenado.";}
+ await atualizarProgressoRota(id);
+ await renderizarListaRuas();
+}
+async function renderizarListaRuas(filtro=""){if(!rotaSelecionadaId)return;const rota=bancoDeRotas[rotaSelecionadaId],registros=await obterRegistrosDaRota(rotaSelecionadaId,MES_ATUAL()),salvos=new Set(registros.map(x=>x.rua)),termo=filtro.trim().toLowerCase(),lista=rota.ruas.filter(r=>r.toLowerCase().includes(termo)),c=document.getElementById("lista-ruas");c.innerHTML="";lista.forEach((rua,i)=>{const item=document.createElement("div");item.className="item-rua"+(rua===ruaSelecionada?" selecionada":"");item.innerHTML='<span class="check">'+(salvos.has(rua)?"✔️":"○")+'</span><button>'+String(i+1)+". "+rua+'</button><button class="pin" title="Abrir navegação"><i data-lucide="map-pin"></i></button>';item.querySelector("button").onclick=()=>selecionarRua(rua);item.querySelector(".pin").onclick=()=>abrirNavegacao(rua);c.appendChild(item)});lucide.createIcons();atualizarProgressoRota(rotaSelecionadaId)}
 function filtrarRuas(v){renderizarListaRuas(v)}
 function atualizarContador(){const e=document.getElementById("obs");document.getElementById("contador-obs").textContent=e.value.length}
 async function selecionarRua(rua){ruaSelecionada=rua;fotosPendentes=[];document.getElementById("painel-rua").classList.remove("oculto");document.getElementById("painel-rua-nome").textContent=rua;document.getElementById("rua-nome").textContent=rua;document.getElementById("status-salvo").textContent="";document.getElementById("foto-status").textContent="";document.getElementById("cam").value="";const id=rotaSelecionadaId+"::"+MES_ATUAL()+"::"+rua;const r=await obterRegistroOffline(id);document.getElementById("leitura").value=r?.leitura||"";document.getElementById("obs").value=r?.obs||"";atualizarContador();await renderizarGaleria(id);await renderizarListaRuas(document.getElementById("busca-rua").value)}
@@ -65,6 +123,6 @@ finally{document.getElementById("gravador-video").classList.add("oculto");docume
 }
 function abrirNavegacao(rua){const q=encodeURIComponent(rua+", Bom Jesus dos Perdões, SP, Brasil");window.open("https://www.google.com/maps/search/?api=1&query="+q,"_blank","noopener")}
 function navegarParaRua(){if(ruaSelecionada)abrirNavegacao(ruaSelecionada)}
-async function salvar(){if(!rotaSelecionadaId||!ruaSelecionada){alert("Selecione uma rua primeiro.");return}const mes=MES_ATUAL(),id=rotaSelecionadaId+"::"+mes+"::"+ruaSelecionada,obs=document.getElementById("obs").value.slice(0,100);const registro={id,rotaId:rotaSelecionadaId,rua:ruaSelecionada,mes,leitura:document.getElementById("leitura").value,obs,atualizadoEm:new Date().toISOString()};try{await salvarRegistroOffline(registro);document.getElementById("status-salvo").textContent="✅ Leitura salva neste aparelho.";await renderizarGaleria(id);await renderizarListaRuas(document.getElementById("busca-rua").value)}catch(e){document.getElementById("status-salvo").textContent="❌ Não foi possível salvar localmente.";console.error(e)}}
+async function salvar(){if(!rotaSelecionadaId||!ruaSelecionada){alert("Selecione uma rua primeiro.");return}const mes=MES_ATUAL(),id=rotaSelecionadaId+"::"+mes+"::"+ruaSelecionada,obs=document.getElementById("obs").value.slice(0,100);const registro={id,rotaId:rotaSelecionadaId,rua:ruaSelecionada,mes,leitura:document.getElementById("leitura").value,obs,gps:ultimoGps?{lat:ultimoGps.lat,lng:ultimoGps.lng,accuracy:ultimoGps.accuracy,ts:ultimoGps.ts}:null,atualizadoEm:new Date().toISOString()};try{await salvarRegistroOffline(registro);document.getElementById("status-salvo").textContent="✅ Leitura salva neste aparelho.";await renderizarGaleria(id);await desenharRuasDaRota(rotaSelecionadaId);await renderizarListaRuas(document.getElementById("busca-rua").value)}catch(e){document.getElementById("status-salvo").textContent="❌ Não foi possível salvar localmente.";console.error(e)}}
 function fecharGaveta(){document.getElementById("gaveta").classList.remove("aberta")}
 atualizarStatus();
