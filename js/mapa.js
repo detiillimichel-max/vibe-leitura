@@ -74,10 +74,10 @@ async function selecionarRota(id){
  document.getElementById("rua-nome").textContent=id;document.getElementById("rua-nome").style.color=rota.cor;
  document.getElementById("rota-badge").textContent=id+" • "+rota.ruas.length+" ENDEREÇOS";
  document.getElementById("rota-contador").textContent="⏳ Carregando tracejado das ruas...";
- document.getElementById("busca-rua").value="";document.getElementById("gaveta").classList.add("aberta");document.getElementById("painel-rua").classList.add("oculto");
+ document.getElementById("busca-rua").value="";document.getElementById("gaveta").classList.add("aberta");document.getElementById("painel-rua").classList.add("oculto");setTimeout(()=>map.invalidateSize(),80);
  renderizarMenuRotas();
  const bounds=await desenharRuasDaRota(id);
- if(bounds.length){map.fitBounds(L.latLngBounds(bounds),{padding:[30,120]})}
+ if(bounds.length){map.fitBounds(L.latLngBounds(bounds),{padding:[20,20]})}
  else if(!navigator.onLine){document.getElementById("rota-contador").textContent="📴 Sem internet — tracejado desta rota ainda não foi armazenado.";}
  await atualizarProgressoRota(id);
  await renderizarPontosParadaRota(id);
