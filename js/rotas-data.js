@@ -15,7 +15,7 @@ const bancoDeRotas = {
     },
     "ROTA 4": {
         cor: "#FFC000",
-        ruas: ["Rua Barbara Cardoso", "Rua Dom Jose Mauricio da Rocha", "Rua Nossa Senhora das Dores", "Rua Papa Pio XII", "Avenida Santo Agostinho", "Rua Sao Geraldo", "Rua Sao Pedro", "Rua Sebastiana Crozara Pinheiro", "Rua Benvinda da Aparecida Paulo", "Rua Josepha Correia da Costa", "Rua B", "Rua Loteamento Anna Paz", "Rua D", "Rua C", "Rua Vicentina Braz Vieira Turri"]
+        ruas: ["Rua Barbara Cardoso", "Rua Dom Jose Mauricio da Rocha", "Rua Nossa Senhora das Dores", "Rua Papa Pio XII", "Avenida Santo Agostinho", "Rua Sao Geraldo", "Rua Sao Pedro", "Rua Sebastiana Crozara Pinheiro", "Rua Benvinda da Aparecida Paulo", "Rua Josepha Correia da Costa", "Rua Nossa Senhora da Consolacao", "Avenida Soldado Jose Menino de Souza", "Rua B", "Rua Loteamento Anna Paz", "Rua D", "Rua C", "Rua Vicentina Braz Vieira Turri"]
     },
     "ROTA 5": {
         cor: "#7030A0",
