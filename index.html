@@ -35,11 +35,13 @@
     <label>Observação / mensagem <span class="contador"><span id="contador-obs">0</span>/100</span></label><textarea id="obs" rows="3" maxlength="100" placeholder="Máximo 100 caracteres" oninput="atualizarContador()"></textarea>
     <button class="btn-camera" onclick="document.getElementById('cam').click()">📸 Tirar foto do hidrômetro</button>
     <input type="file" id="cam" accept="image/*" capture="environment" hidden onchange="selecionarFoto(event)">
-    <div id="foto-status"></div><div id="contador-fotos"></div><div id="galeria-fotos"></div>
+    <div id="foto-status"></div><div id="contador-fotos"></div><div id="galeria-fotos"></div><button class="btn-camera" onclick="iniciarVideo()">🎥 Gravar vídeo (máx. 30 s)</button><div id="video-status"></div><div id="galeria-videos"></div><button class="btn-compartilhar" onclick="compartilharRegistro()">📤 Compartilhar foto/vídeo + anotação</button>
     <button class="btn-salvar" onclick="salvar()">💾 SALVAR LEITURA</button>
     <div id="status-salvo"></div>
   </div>
 </section>
+<div id="visualizador-midia" class="visualizador-midia oculto"><button class="viewer-fechar" onclick="fecharVisualizador()">✕</button><div id="viewer-conteudo"></div><div id="viewer-acoes"><button onclick="compartilharMidiaAtual()">📤 Compartilhar</button></div></div>
+<div id="gravador-video" class="gravador-video oculto"><div class="gravador-topo"><b>🎥 Gravar vídeo</b><span id="tempo-video">00:00 / 00:30</span></div><video id="preview-video" autoplay muted playsinline></video><div class="gravador-acoes"><button onclick="pararVideo()">⏹️ Parar e salvar</button><button onclick="cancelarVideo()">✕ Cancelar</button></div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 <script src="js/rotas-data.js"></script><script src="js/db.js"></script><script src="js/mapa.js"></script>
