@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#050505">
 <title>Vibe Leitura - OIO ONE</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.468.0/font/Lucide.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -14,7 +15,9 @@
   <p class="subtitulo">Vibe Leitura</p><p class="toque">Toque para carregar as 20 rotas</p>
 </div>
 <div id="status-offline" class="status-online">● ONLINE</div>
-<div id="salto-quantico"></div><div id="map"></div>
+<button id="btn-menu-rotas" class="btn-menu-rotas" onclick="abrirMenuRotas()" aria-label="Abrir rotas"><i data-lucide="menu"></i></button>
+<div id="menu-rotas" class="menu-rotas"><div class="menu-cabecalho"><div><small>VIBE LEITURA</small><h2>20 ROTAS</h2></div><button onclick="fecharMenuRotas()" aria-label="Fechar"><i data-lucide="x"></i></button></div><div id="lista-rotas-menu"></div></div>
+<div id="menu-overlay" onclick="fecharMenuRotas()"></div><div id="map"></div>
 <section id="gaveta" class="gaveta">
   <div class="puxador"></div>
   <div class="gaveta-topo">
@@ -29,15 +32,16 @@
       <button class="btn-navegar" onclick="navegarParaRua()">📍 Navegar</button>
     </div>
     <label>Leitura atual</label><input type="number" id="leitura" inputmode="decimal" placeholder="Digite a leitura">
-    <label>Observação / mensagem</label><textarea id="obs" rows="3" placeholder="Vazamento, problema, observação..."></textarea>
+    <label>Observação / mensagem <span class="contador"><span id="contador-obs">0</span>/100</span></label><textarea id="obs" rows="3" maxlength="100" placeholder="Máximo 100 caracteres" oninput="atualizarContador()"></textarea>
     <button class="btn-camera" onclick="document.getElementById('cam').click()">📸 Tirar foto do hidrômetro</button>
     <input type="file" id="cam" accept="image/*" capture="environment" hidden onchange="selecionarFoto(event)">
-    <div id="foto-status"></div>
+    <div id="foto-status"></div><div id="contador-fotos"></div><div id="galeria-fotos"></div>
     <button class="btn-salvar" onclick="salvar()">💾 SALVAR LEITURA</button>
     <div id="status-salvo"></div>
   </div>
 </section>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 <script src="js/rotas-data.js"></script><script src="js/db.js"></script><script src="js/mapa.js"></script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(()=>{}));}</script>
 </body></html>
