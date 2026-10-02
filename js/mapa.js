@@ -22,7 +22,7 @@ function limparCamadasRuas(){camadasRuasRota.forEach(x=>map.removeLayer(x));cama
 function chaveCacheRota(id){return "vibe-leitura-geometria-"+id.replace(/\s+/g,"-").toLowerCase()}
 function lerCacheGeometria(id){try{const x=JSON.parse(localStorage.getItem(chaveCacheRota(id))||"null");if(x?.savedAt&&Date.now()-x.savedAt<CACHE_GEOMETRIA_TTL&&Array.isArray(x.ways))return x.ways}catch(e){}return null}
 function gravarCacheGeometria(id,ways){try{localStorage.setItem(chaveCacheRota(id),JSON.stringify({savedAt:Date.now(),ways}))}catch(e){}}
-function montarRegexNomes(ruas){return ruas.map(NORMALIZAR).filter(Boolean).sort((a,b)=>b.length-a.length).map(n=>n.replace(/[.*+?^()|[\]\\]/g,"\\function atualizarStatus(){")).join("|")}
+function montarRegexNomes(ruas){return ruas.map(NORMALIZAR).filter(Boolean).sort((a,b)=>b.length-a.length).map(n=>n.replace(/[.*+?^()|[\]\\]/g,"\\function montarRegexNomes(ruas){return ruas.map(NORMALIZAR).filter(Boolean).sort((a,b)=>b.length-a.length).map(n=>n.replace(/[.*+?^()|[\]\\]/g,"\\function atualizarStatus(){")).join("|")}")).join("|")}
 async function buscarGeometriasOSM(id){
  const rota=bancoDeRotas[id],cached=lerCacheGeometria(id);if(cached)return cached;
  const regex=montarRegexNomes(rota.ruas);if(!regex)return [];
