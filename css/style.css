@@ -69,3 +69,7 @@
  box-shadow:0 4px 18px #000b!important;
 }
 .painel-rua{padding-bottom:125px!important}
+
+#gps-track{position:absolute;top:54px;right:10px;z-index:2500;border:1px solid #333;border-radius:999px;background:#050505dd;color:#fff;padding:8px 11px;font-size:10px;font-weight:900;box-shadow:0 4px 14px #0008;backdrop-filter:blur(10px)}
+#gps-track.ativo{color:#00e676;border-color:#00e67655}
+@media(max-width:600px){#gps-track{top:55px;right:10px}}
