@@ -35,7 +35,7 @@
     <label>Observação / mensagem <span class="contador"><span id="contador-obs">0</span>/100</span></label><textarea id="obs" rows="3" maxlength="100" placeholder="Máximo 100 caracteres" oninput="atualizarContador()"></textarea>
     <button class="btn-camera" onclick="document.getElementById('cam').click()">📸 Tirar foto do hidrômetro</button>
     <input type="file" id="cam" accept="image/*" capture="environment" hidden onchange="selecionarFoto(event)">
-    <div id="foto-status"></div><div id="contador-fotos"></div><div id="galeria-fotos"></div><button class="btn-camera" onclick="iniciarVideo()">🎥 Gravar vídeo (máx. 30 s)</button><div id="video-status"></div><div id="galeria-videos"></div><button class="btn-compartilhar" onclick="compartilharRegistro()">📤 Compartilhar foto/vídeo + anotação</button>
+    <div id="foto-status"></div><div id="contador-fotos"></div><div id="galeria-fotos"></div><div class="midia-secao"><div class="midia-titulo">🎥 VÍDEO DO ENDEREÇO</div><button class="btn-camera btn-video" onclick="iniciarVideo()">🎥 GRAVAR VÍDEO — ATÉ 30 s</button><div id="video-status"></div><div id="galeria-videos"></div></div><button class="btn-compartilhar" onclick="compartilharRegistro()">📤 COMPARTILHAR MÍDIA + ANOTAÇÃO</button>
     <button class="btn-salvar" onclick="salvar()">💾 SALVAR LEITURA</button>
     <div id="status-salvo"></div>
   </div>
