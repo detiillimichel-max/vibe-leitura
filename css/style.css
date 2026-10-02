@@ -43,3 +43,29 @@
 .gravador-video{position:fixed;inset:0;z-index:7500;background:#000;display:flex;flex-direction:column}.gravador-topo{display:flex;justify-content:space-between;padding:18px;color:#fff}.gravador-video video{width:100%;height:calc(100% - 130px);object-fit:cover}.gravador-acoes{display:flex;gap:8px;padding:12px}.gravador-acoes button{flex:1;padding:14px;border:0;border-radius:12px;font-weight:900}
 
 .midia-secao{margin-top:12px;padding:10px;border:1px solid #292929;border-radius:14px;background:#0b0b0b}.midia-titulo{font-size:11px;font-weight:900;color:#aaa;margin-bottom:6px}.btn-video{background:#252525!important;border:1px solid #444!important;font-size:15px}.painel-rua{padding-bottom:10px}.btn-compartilhar{position:sticky;bottom:56px;z-index:20;box-shadow:0 -5px 16px #111}.btn-salvar{position:sticky;bottom:0;z-index:21;box-shadow:0 -5px 16px #111}.video-item{cursor:pointer}.video-item video{background:#000}.viewer-acoes{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.viewer-acoes button{min-width:145px}.media-vazio{grid-column:1/-1;padding:10px;color:#777;font-size:12px;text-align:center}
+/* Ações principais: ficam sempre visíveis no celular */
+.btn-compartilhar{
+ position:fixed!important;
+ left:16px!important;
+ right:16px!important;
+ bottom:62px!important;
+ z-index:6000!important;
+ width:auto!important;
+ margin:0!important;
+ background:#168a4a!important;
+ color:#fff!important;
+ box-shadow:0 4px 18px #000b!important;
+}
+.btn-salvar{
+ position:fixed!important;
+ left:16px!important;
+ right:16px!important;
+ bottom:10px!important;
+ z-index:6001!important;
+ width:auto!important;
+ margin:0!important;
+ background:#39ff14!important;
+ color:#000!important;
+ box-shadow:0 4px 18px #000b!important;
+}
+.painel-rua{padding-bottom:125px!important}
