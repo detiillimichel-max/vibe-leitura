@@ -1,80 +1,15 @@
-:root {
-    --bg: #050505;
-    --card: #121212;
-    --neon-blue: #00f2ff;
-    --neon-green: #39ff14;
-    --neon-red: #ff3131;
-    --text: #e0e0e0;
-}
-
-body, html { 
-    margin: 0; padding: 0; height: 100%; 
-    background: var(--bg); color: var(--text);
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    user-select: none;
-}
-
-/* Camada de Identidade - Splash Screen */
-#tela-identidade {
-    position: fixed; inset: 0; background: var(--bg);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    z-index: 5000; transition: transform 0.8s cubic-bezier(0.87, 0, 0.13, 1);
-}
-
-.logo-vibe {
-    font-size: 3rem; font-weight: 900; letter-spacing: -2px;
-    background: linear-gradient(to right, var(--neon-blue), var(--neon-green));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    margin-bottom: 20px;
-}
-
-/* Salto Quântico - Grid Superior */
-#salto-quantico {
-    position: absolute; top: 15px; left: 10px; right: 10px; z-index: 2000;
-    display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
-    padding: 10px; background: rgba(18, 18, 18, 0.8);
-    backdrop-filter: blur(15px); border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.1);
-}
-
-.mini-rota {
-    height: 45px; border-radius: 10px; display: flex; 
-    align-items: center; justify-content: center; font-weight: bold;
-    font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.05);
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-}
-
-/* Gaveta de Operação OIO ONE */
-.gaveta {
-    position: fixed; bottom: -100%; left: 0; width: 100%;
-    height: 90%; background: var(--card); z-index: 3000;
-    border-radius: 35px 35px 0 0; border-top: 2px solid var(--neon-blue);
-    padding: 30px; box-sizing: border-box;
-    transition: bottom 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* Display de Leitura Estilo Industrial */
-.medidor-container {
-    background: #000; padding: 25px; border-radius: 20px;
-    border: 1px solid #333; margin: 20px 0;
-    box-shadow: inset 0 0 20px rgba(0,242,255,0.1);
-}
-
-#leitura {
-    width: 100%; background: transparent; border: none;
-    color: var(--neon-green); font-size: 3.5rem; text-align: center;
-    font-family: 'monospace'; outline: none; letter-spacing: 5px;
-}
-
-/* Botões de Comando */
-.btn-comando {
-    width: 100%; padding: 20px; border-radius: 18px; border: none;
-    font-weight: 800; font-size: 1.1rem; text-transform: uppercase;
-    cursor: pointer; transition: 0.3s;
-}
-
-.btn-salvar { background: var(--neon-green); color: #000; }
-.btn-audio { 
-    background: #222; color: var(--neon-red); 
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-}
+:root{--bg:#050505;--card:#111;--text:#eee;--muted:#aaa;--green:#39ff14}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text)}
+#map{position:absolute;inset:0;z-index:1}#tela-identidade{position:fixed;inset:0;z-index:5000;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#050505;color:#fff;text-align:center;transition:transform .6s ease}
+.foto-identidade{width:130px;height:130px;border-radius:50%;border:4px solid #007bff;background:url('https://github.com/detillimichel-max.png') center/cover;margin-bottom:15px}.subtitulo{color:#00f2ff;font-weight:800}.toque{opacity:.6;font-size:13px}
+#status-offline{position:absolute;top:10px;right:10px;z-index:2500;padding:7px 10px;border-radius:999px;background:#000b;font-size:11px;font-weight:800}.status-online{color:#39ff14}.status-offline-mode{color:#ffd400}
+#salto-quantico{position:absolute;top:10px;left:10px;right:10px;z-index:2000;display:grid;grid-template-columns:repeat(10,minmax(36px,1fr));gap:6px;padding:8px;padding-top:42px;max-height:112px;overflow:auto;background:#0a0ac7;backdrop-filter:blur(12px);border-radius:18px}
+.mini-rota{height:36px;border-radius:9px;border:2px solid #ffffff44;color:#fff;font-weight:900;font-size:12px;cursor:pointer;box-shadow:0 2px 8px #0008}.mini-rota.ativa{outline:3px solid #fff}
+.gaveta{position:fixed;left:0;right:0;bottom:-100%;height:min(88vh,760px);z-index:3000;background:#111;border-radius:28px 28px 0 0;border-top:2px solid #00f2ff;padding:14px 16px 24px;transition:bottom .35s ease;overflow:hidden;box-shadow:0 -10px 35px #0009}.gaveta.aberta{bottom:0}
+.puxador{width:44px;height:5px;background:#666;border-radius:99px;margin:0 auto 10px}.gaveta-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}#rota-badge{font-size:11px;font-weight:900;opacity:.65}#rua-nome{margin:2px 0;font-size:24px}#rota-contador{margin:0 0 10px;color:var(--muted);font-size:13px}
+.btn-fechar{border:0;background:#222;color:#fff;width:38px;height:38px;border-radius:50%;font-size:18px}
+#busca-rua,input,textarea{width:100%;padding:12px;border-radius:12px;border:1px solid #333;background:#050505;color:#fff;font-size:16px}#busca-rua{margin-bottom:10px}
+#lista-ruas{height:35%;min-height:120px;overflow:auto;border:1px solid #292929;border-radius:14px}.item-rua{display:flex;align-items:center;gap:8px;padding:10px;border-bottom:1px solid #252525}.item-rua:last-child{border-bottom:0}.item-rua button{flex:1;text-align:left;background:transparent;border:0;color:#fff;font-size:14px;padding:3px}.item-rua .check{width:24px;text-align:center}.item-rua .pin{width:36px;flex:none;border:0;border-radius:8px;padding:7px;background:#222;color:#fff}.item-rua.selecionada{background:#202020}
+.painel-rua{margin-top:10px;height:calc(65% - 70px);overflow:auto}.oculto{display:none}.painel-cabecalho{display:flex;justify-content:space-between;align-items:center;gap:10px}.painel-cabecalho small{color:#777;font-size:10px;font-weight:900}.painel-cabecalho h3{margin:3px 0 12px}.painel-rua label{display:block;font-size:12px;color:#aaa;margin:8px 0 5px}
+.btn-navegar,.btn-camera,.btn-salvar{width:100%;padding:13px;border:0;border-radius:12px;font-weight:900;margin-top:8px;cursor:pointer}.btn-navegar{width:auto;background:#1d4ed8;color:#fff;white-space:nowrap}.btn-camera{background:#292929;color:#fff}.btn-salvar{background:#39ff14;color:#000;font-size:16px}#foto-status{margin-top:8px;color:#39ff14;font-size:12px}#status-salvo{min-height:20px;margin-top:8px;color:#39ff14;font-weight:800;font-size:13px}.leaflet-control-attribution{font-size:9px}
+@media(max-width:600px){#salto-quantico{grid-template-columns:repeat(10,34px);overflow-x:auto}.gaveta{height:92vh}}
