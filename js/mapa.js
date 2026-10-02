@@ -2,7 +2,7 @@ const map=L.map("map",{zoomControl:false}).setView([-23.1337,-46.3015],16);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
 let camadaDelineacao=null,rotaSelecionadaId=null,ruaSelecionada=null,fotosPendentes=[],midiaAtual=null,gravador=null,streamVideo=null,chunksVideo=[],timerVideo=null,segundosVideo=0;
 let rastreamentoAtivo=false,watchGpsId=null,trilhaGps=[],distanciaGps=0,ultimoGps=null,trilhaLayer=null,gpsMarker=null;
-let camadasRuasRota=[],geometriasRotaCache=null,camadasParadas=[],paradaEstado={ruaKey:null,rua:null,inicio:0,ultimo:null};
+let camadasRuasRota=[],geometriasRotaCache=null,camadasParadas=[],paradaEstado={ruaKey:null,rua:null,inicio:0,ultimo:null},selecaoRotaToken=0;
 const PARADA_DURACAO_MS=40000,PARADA_MAX_ACURACIA=60,PARADA_MAX_DISTANCIA_ROTA=35,PARADA_MAX_MOVIMENTO=20,PARADA_MAX_INTERVALO=20000;
 function gpsDist(a,b){const R=6371000,p=Math.PI/180,dLat=(b.lat-a.lat)*p,dLon=(b.lng-a.lng)*p,x=Math.sin(dLat/2)**2+Math.cos(a.lat*p)*Math.cos(b.lat*p)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
 function atualizarGpsPainel(){const t=document.getElementById("gps-track");if(!t)return;const acc=ultimoGps?.accuracy?Math.round(ultimoGps.accuracy)+" m":"—";const d=distanciaGps<1000?Math.round(distanciaGps)+" m":(distanciaGps/1000).toFixed(2)+" km";const segundoPlano=document.hidden;const estado=segundoPlano?"🟡 GPS EM 2º PLANO":(rastreamentoAtivo?"🟢 GPS ATIVO":"⚪ GPS parado");t.innerHTML=estado+" · ±"+acc+" · "+d;t.classList.toggle("ativo",rastreamentoAtivo&&!segundoPlano)}
@@ -38,7 +38,17 @@ async function buscarGeometriasOSM(id){
  const regex=montarRegexNomes(rota.ruas);if(!regex)return [];
  const query='[out:json][timeout:45];way["highway"]["name"~"^('+regex+')$",i](-23.35,-46.55,-22.95,-46.15);out geom;';
  let ultimoErro=null;
- for(const endpoint of OVERPASS_URLS){try{const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body:"data="+encodeURIComponent(query)});if(!r.ok)throw new Error("HTTP "+r.status);const j=await r.json();const ways=(j.elements||[]).filter(x=>Array.isArray(x.geometry)&&x.geometry.length>1).map(x=>({id:x.id,name:x.tags?.name||"",nameKey:NORMALIZAR(x.tags?.name),geometry:x.geometry.map(p=>[p.lat,p.lon])}));if(ways.length){gravarCacheGeometria(id,ways);return ways}return []}catch(e){ultimoErro=e}}
+ for(const endpoint of OVERPASS_URLS){
+   const controlador=new AbortController(),timer=setTimeout(()=>controlador.abort(),12000);
+   try{
+     const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body:"data="+encodeURIComponent(query),signal:controlador.signal});
+     if(!r.ok)throw new Error("HTTP "+r.status);
+     const j=await r.json();
+     const ways=(j.elements||[]).filter(x=>Array.isArray(x.geometry)&&x.geometry.length>1).map(x=>({id:x.id,name:x.tags?.name||"",nameKey:NORMALIZAR(x.tags?.name),geometry:x.geometry.map(p=>[p.lat,p.lon])}));
+     if(ways.length){gravarCacheGeometria(id,ways);clearTimeout(timer);return ways}
+     clearTimeout(timer);return [];
+   }catch(e){clearTimeout(timer);ultimoErro=e}
+ }
  console.warn("Não foi possível carregar geometria OSM:",ultimoErro);return [];
 }
 async function desenharRuasDaRota(id){
@@ -69,20 +79,40 @@ function abrirMenuRotas(){document.getElementById("menu-rotas").classList.add("a
 function fecharMenuRotas(){document.getElementById("menu-rotas").classList.remove("aberto");document.getElementById("menu-overlay").classList.remove("aberto")}
 function renderizarMenuRotas(){const c=document.getElementById("lista-rotas-menu");c.innerHTML="";Object.keys(bancoDeRotas).forEach(id=>{const b=document.createElement("button");b.className="rota-menu-item"+(id===rotaSelecionadaId?" ativa":"");b.innerHTML='<span class="numero" style="background:'+bancoDeRotas[id].cor+'">'+id.replace("ROTA ","")+'</span><span>'+id+'<br><small style="opacity:.5">'+bancoDeRotas[id].ruas.length+' endereços</small></span>';b.onclick=()=>{selecionarRota(id);fecharMenuRotas()};c.appendChild(b)});lucide.createIcons()}
 async function selecionarRota(id){
- rotaSelecionadaId=id;ruaSelecionada=null;fotosPendentes=[];resetarParadaGps();
+ const token=++selecaoRotaToken;
  const rota=bancoDeRotas[id];
+ if(!rota)return;
+ rotaSelecionadaId=id;ruaSelecionada=null;fotosPendentes=[];resetarParadaGps();
  document.getElementById("rua-nome").textContent=id;document.getElementById("rua-nome").style.color=rota.cor;
  document.getElementById("rota-badge").textContent=id+" • "+rota.ruas.length+" ENDEREÇOS";
- document.getElementById("rota-contador").textContent="⏳ Carregando tracejado das ruas...";
- document.getElementById("busca-rua").value="";document.getElementById("gaveta").classList.add("aberta");document.getElementById("painel-rua").classList.add("oculto");setTimeout(()=>map.invalidateSize(),80);
+ document.getElementById("rota-contador").textContent="⏳ Preparando rota...";
+ document.getElementById("busca-rua").value="";document.getElementById("gaveta").classList.add("aberta");document.getElementById("painel-rua").classList.add("oculto");
+ setTimeout(()=>map.invalidateSize(),80);
  renderizarMenuRotas();
- const bounds=await desenharRuasDaRota(id);
- if(bounds.length){map.fitBounds(L.latLngBounds(bounds),{padding:[20,20]})}
- else if(!navigator.onLine){document.getElementById("rota-contador").textContent="📴 Sem internet — tracejado desta rota ainda não foi armazenado.";}
- await atualizarProgressoRota(id);
- await renderizarPontosParadaRota(id);
- await garantirLocalizacao();
+
+ // A lista de ruas aparece imediatamente. Rede/Overpass/GPS não podem bloquear a interface.
  await renderizarListaRuas();
+ if(token!==selecaoRotaToken)return;
+ atualizarProgressoRota(id);
+
+ // Geometria OSM e localização trabalham em segundo plano.
+ desenharRuasDaRota(id).then(async bounds=>{
+   if(token!==selecaoRotaToken||rotaSelecionadaId!==id)return;
+   if(bounds.length)map.fitBounds(L.latLngBounds(bounds),{padding:[20,20]});
+   else if(!navigator.onLine){
+     document.getElementById("rota-contador").textContent="📴 Sem internet — tracejado desta rota ainda não foi armazenado.";
+   }else{
+     document.getElementById("rota-contador").textContent="⚠️ Tracejado OSM indisponível no momento. A lista da rota continua disponível.";
+   }
+   await renderizarPontosParadaRota(id);
+   await renderizarListaRuas(document.getElementById("busca-rua")?.value||"");
+ }).catch(err=>{
+   if(token!==selecaoRotaToken)return;
+   console.warn("Falha ao desenhar rota:",err);
+   document.getElementById("rota-contador").textContent="⚠️ Não foi possível carregar o tracejado agora. A rota continua disponível.";
+ });
+
+ garantirLocalizacao().catch(err=>console.warn("Localização:",err));
 }
 async function renderizarListaRuas(filtro=""){if(!rotaSelecionadaId)return;const rota=bancoDeRotas[rotaSelecionadaId],pontos=await obterProgressoRotaDaRota(rotaSelecionadaId,MES_ATUAL()),contagem=new Map();pontos.forEach(x=>contagem.set(x.ruaKey,(contagem.get(x.ruaKey)||0)+1));const termo=filtro.trim().toLowerCase(),lista=rota.ruas.filter(r=>r.toLowerCase().includes(termo)),c=document.getElementById("lista-ruas");c.innerHTML="";lista.forEach((rua,i)=>{const item=document.createElement("div");item.className="item-rua"+(rua===ruaSelecionada?" selecionada":"");const n=contagem.get(NORMALIZAR(rua))||0;item.innerHTML=`<span class="check">${n?"📍 "+n:"○"}</span><button>${String(i+1)}. ${rua}</button><button class="pin" title="Abrir navegação"><i data-lucide="map-pin"></i></button>`;item.querySelector("button").onclick=()=>selecionarRua(rua);item.querySelector(".pin").onclick=()=>abrirNavegacao(rua);c.appendChild(item)});lucide.createIcons();atualizarProgressoRota(rotaSelecionadaId)}
 function filtrarRuas(v){renderizarListaRuas(v)}
