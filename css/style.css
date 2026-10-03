@@ -27,7 +27,7 @@
 .foto-item img{width:100%;height:100%;object-fit:cover}
 .foto-item button{position:absolute;top:4px;right:4px;width:27px;height:27px;border:0;border-radius:50%;background:#000b;color:#fff;display:grid;place-items:center}
 
-.gaveta{position:fixed;left:0;right:0;top:40dvh;bottom:-100%;height:auto;max-height:60dvh;z-index:3000;background:#111;border-radius:28px 28px 0 0;border-top:2px solid #00f2ff;padding:14px 16px 24px;transition:bottom .35s ease;overflow:hidden;box-shadow:0 -10px 35px #0009}.gaveta.aberta{bottom:0}
+.gaveta{position:fixed;left:0;right:0;top:40dvh;bottom:-100%;height:auto;max-height:60dvh;z-index:3000;background:#111;border-radius:28px 28px 0 0;border-top:2px solid #00f2ff;padding:14px 16px 24px;transition:bottom .35s ease;overflow-y:auto;overflow-x:hidden;box-shadow:0 -10px 35px #0009}.gaveta.aberta{bottom:0}
 .puxador{width:44px;height:5px;background:#666;border-radius:99px;margin:0 auto 10px}.gaveta-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}#rota-badge{font-size:11px;font-weight:900;opacity:.65}#rua-nome{margin:2px 0;font-size:24px}#rota-contador{margin:0 0 10px;color:var(--muted);font-size:13px}
 .btn-fechar{border:0;background:#222;color:#fff;width:38px;height:38px;border-radius:50%;font-size:18px}
 #busca-rua,input,textarea{width:100%;padding:12px;border-radius:12px;border:1px solid #333;background:#050505;color:#fff;font-size:16px}#busca-rua{margin-bottom:10px}
@@ -73,3 +73,7 @@
 #gps-track{position:absolute;top:54px;right:10px;z-index:2500;border:1px solid #333;border-radius:999px;background:#050505dd;color:#fff;padding:8px 11px;font-size:10px;font-weight:900;box-shadow:0 4px 14px #0008;backdrop-filter:blur(10px)}
 #gps-track.ativo{color:#00e676;border-color:#00e67655}
 @media(max-width:600px){#gps-track{top:55px;right:10px}}
+
+/* O painel da rua precisa ficar acessível abaixo da lista no celular */
+#lista-ruas{max-height:30dvh;flex:none}
+.painel-rua{position:relative;display:block}
