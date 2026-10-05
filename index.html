@@ -38,9 +38,18 @@
     </div>
     <label>Leitura atual</label><input type="number" id="leitura" inputmode="decimal" placeholder="Digite a leitura">
     <label>Observação / mensagem <span class="contador"><span id="contador-obs">0</span>/100</span></label><textarea id="obs" rows="3" maxlength="100" placeholder="Máximo 100 caracteres" oninput="atualizarContador()"></textarea>
-    <button class="btn-camera" onclick="document.getElementById('cam').click()">📸 Tirar foto do hidrômetro</button>
+    <div class="midia-botoes">
+      <button class="btn-camera" onclick="document.getElementById('cam').click()">📸 Tirar foto do hidrômetro</button>
+      <button class="btn-camera btn-galeria" onclick="document.getElementById('cam-galeria').click()">🖼️ FOTO DA GALERIA</button>
+    </div>
     <input type="file" id="cam" accept="image/*" capture="environment" hidden onchange="selecionarFoto(event)">
-    <div id="foto-status"></div><div id="contador-fotos"></div><div id="galeria-fotos"></div><div class="midia-secao"><div class="midia-titulo">🎥 VÍDEO DO ENDEREÇO</div><button class="btn-camera btn-video" onclick="iniciarVideo()">🎥 GRAVAR VÍDEO — ATÉ 30 s</button><div id="video-status"></div><div id="galeria-videos"></div></div><button class="btn-compartilhar" onclick="compartilharRegistro()">📤 COMPARTILHAR MÍDIA + ANOTAÇÃO</button>
+    <input type="file" id="cam-galeria" accept="image/*" hidden onchange="selecionarFotoGaleria(event)">
+    <div id="foto-status"></div><div id="contador-fotos"></div><div id="galeria-fotos"></div><div class="midia-secao"><div class="midia-titulo">🎥 VÍDEO DO ENDEREÇO</div><div class="midia-botoes">
+      <button class="btn-camera btn-video" onclick="iniciarVideo()">🎥 GRAVAR VÍDEO — ATÉ 30 s</button>
+      <button class="btn-camera btn-galeria-video" onclick="document.getElementById('video-galeria').click()">🖼️ VÍDEO DA GALERIA</button>
+    </div>
+    <input type="file" id="video-galeria" accept="video/*" hidden onchange="selecionarVideoGaleria(event)">
+    <div id="video-status"></div><div id="galeria-videos"></div></div><button class="btn-compartilhar" onclick="compartilharRegistro()">📤 COMPARTILHAR MÍDIA + ANOTAÇÃO</button>
     <button class="btn-salvar" onclick="salvar()">💾 SALVAR LEITURA</button>
     <div id="status-salvo"></div>
   </div>
