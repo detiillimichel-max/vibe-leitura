@@ -99,3 +99,10 @@
 @media(max-width:600px){
  .gaveta.modo-rua{top:0;max-height:none;height:100dvh;padding:14px 16px 24px}
 }
+
+/* Seleção de mídia da galeria */
+.midia-botoes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.midia-botoes .btn-camera{margin-top:8px}
+.btn-galeria{background:#303030;border:1px solid #444}
+.btn-galeria-video{background:#303030!important;border:1px solid #444!important}
+@media(max-width:420px){.midia-botoes{grid-template-columns:1fr}}
