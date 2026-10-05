@@ -77,3 +77,25 @@
 /* O painel da rua precisa ficar acessível abaixo da lista no celular */
 #lista-ruas{max-height:30dvh;flex:none}
 .painel-rua{position:relative;display:block}
+
+/* Tela individual de cada rua/endereço */
+.btn-voltar-lista{display:none;width:100%;padding:11px 12px;margin:0 0 12px;border:1px solid #333;border-radius:12px;background:#191919;color:#fff;font-weight:900;text-align:left}
+.btn-voltar-lista.visivel{display:block}
+.gaveta.modo-rua{
+ top:0;
+ bottom:0;
+ height:100dvh;
+ max-height:none;
+ border-radius:0;
+ border-top:0;
+ z-index:5000;
+ padding-top:14px;
+}
+.gaveta.modo-rua .puxador{display:none}
+.gaveta.modo-rua #busca-rua,
+.gaveta.modo-rua #lista-ruas{display:none}
+.gaveta.modo-rua .gaveta-topo{margin-bottom:12px}
+.gaveta.modo-rua .painel-rua{margin-top:0}
+@media(max-width:600px){
+ .gaveta.modo-rua{top:0;max-height:none;height:100dvh;padding:14px 16px 24px}
+}
