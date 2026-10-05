@@ -121,6 +121,22 @@ async function selecionarRua(rua){ruaSelecionada=rua;fotosPendentes=[];const gav
 function voltarParaListaRuas(){const gaveta=document.getElementById("gaveta");document.getElementById("painel-rua").classList.add("oculto");document.getElementById("btn-voltar-lista").classList.remove("visivel");gaveta.classList.remove("modo-rua");ruaSelecionada=null;fotosPendentes=[];document.getElementById("status-salvo").textContent="";document.getElementById("foto-status").textContent="";document.getElementById("video-status").textContent="";renderizarListaRuas(document.getElementById("busca-rua").value||"")}
 async function comprimirFoto(file){return new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{const max=1600;let w=img.naturalWidth,h=img.naturalHeight;if(w>max||h>max){const escala=Math.min(max/w,max/h);w=Math.round(w*escala);h=Math.round(h*escala)}const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;canvas.getContext("2d").drawImage(img,0,0,w,h);canvas.toBlob(blob=>{URL.revokeObjectURL(url);blob?resolve(blob):reject(new Error("Falha ao preparar foto"))},"image/jpeg",.82)};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error("Imagem inválida"))};img.src=url})}
 async function selecionarFoto(e){const file=e.target.files?.[0];if(!file||!ruaSelecionada||!rotaSelecionadaId)return;const mes=MES_ATUAL(),registroId=rotaSelecionadaId+"::"+mes+"::"+ruaSelecionada,existentes=await obterFotosDoMes(mes);if(existentes.length>=50){document.getElementById("foto-status").textContent="⚠️ Limite de 50 fotos deste mês atingido.";e.target.value="";return}try{document.getElementById("foto-status").textContent="⏳ Salvando foto...";const blob=await comprimirFoto(file);await salvarFotoOffline({id:crypto.randomUUID(),registroId,rotaId:rotaSelecionadaId,rua:ruaSelecionada,mes,blob,criadaEm:new Date().toISOString()});document.getElementById("foto-status").textContent="✅ Foto salva neste endereço.";await renderizarGaleria(registroId)}catch(err){document.getElementById("foto-status").textContent="❌ Não foi possível salvar a foto.";console.error(err)}finally{e.target.value=""}}
+async function selecionarFotoGaleria(e){
+ const file=e.target.files?.[0];
+ if(!file||!ruaSelecionada||!rotaSelecionadaId){e.target.value="";return}
+ const mes=MES_ATUAL(),registroId=rotaSelecionadaId+"::"+mes+"::"+ruaSelecionada,existentes=await obterFotosDoMes(mes);
+ if(existentes.length>=50){document.getElementById("foto-status").textContent="⚠️ Limite de 50 fotos deste mês atingido.";e.target.value="";return}
+ try{
+   document.getElementById("foto-status").textContent="⏳ Salvando foto da galeria...";
+   const blob=await comprimirFoto(file);
+   await salvarFotoOffline({id:crypto.randomUUID(),registroId,rotaId:rotaSelecionadaId,rua:ruaSelecionada,mes,blob,criadaEm:new Date().toISOString(),origem:"galeria"});
+   document.getElementById("foto-status").textContent="✅ Foto da galeria salva neste endereço.";
+   await renderizarGaleria(registroId);
+ }catch(err){
+   document.getElementById("foto-status").textContent="❌ Não foi possível salvar a foto da galeria.";
+   console.error(err);
+ }finally{e.target.value=""}
+}
 async function renderizarGaleria(registroId){const cf=document.getElementById("galeria-fotos"),cv=document.getElementById("galeria-videos");cf.innerHTML="";cv.innerHTML="";const fotos=await obterFotosDoRegistro(registroId),videos=await obterVideosDoRegistro(registroId),mesFotos=await obterFotosDoMes(MES_ATUAL());document.getElementById("contador-fotos").textContent="📷 "+mesFotos.length+"/50 fotos usadas em "+MES_ATUAL();
 for(const foto of fotos){const item=document.createElement("div");item.className="foto-item";const url=URL.createObjectURL(foto.blob);item.innerHTML='<img src="'+url+'"><button title="Apagar foto"><i data-lucide="trash-2"></i></button><button class="media-abrir" title="Visualizar"></button>';item.querySelector(".media-abrir").onclick=()=>abrirVisualizador(foto.blob,"image",foto.id);item.querySelector(".foto-item>button:not(.media-abrir)").onclick=async()=>{if(confirm("Apagar esta foto?")){await apagarFotoOffline(foto.id);URL.revokeObjectURL(url);await renderizarGaleria(registroId)}};cf.appendChild(item)}
 for(const video of videos){const item=document.createElement("div");item.className="video-item";const url=URL.createObjectURL(video.blob);item.innerHTML='<video src="'+url+'" muted playsinline></video><div class="media-play">▶️</div><button title="Apagar vídeo"><i data-lucide="trash-2"></i></button>';item.onclick=(e)=>{if(e.target.closest("button"))return;abrirVisualizador(video.blob,"video",video.id)};item.querySelector("button").onclick=async()=>{if(confirm("Apagar este vídeo?")){await apagarVideoOffline(video.id);URL.revokeObjectURL(url);await renderizarGaleria(registroId)}};cv.appendChild(item)}
@@ -149,6 +165,37 @@ timerVideo=setInterval(()=>{segundosVideo++;document.getElementById("tempo-video
 }
 function pararVideo(){if(!gravador||gravador.state==="inactive")return;clearInterval(timerVideo);timerVideo=null;if(gravador.state==="recording")gravador.stop();if(streamVideo)streamVideo.getTracks().forEach(t=>t.stop())}
 function cancelarVideo(){clearInterval(timerVideo);timerVideo=null;if(gravador&&gravador.state!=="inactive"){gravador.onstop=null;gravador.stop()}if(streamVideo)streamVideo.getTracks().forEach(t=>t.stop());document.getElementById("gravador-video").classList.add("oculto");document.getElementById("preview-video").srcObject=null;document.getElementById("video-status").textContent="Gravação cancelada.";gravador=null;streamVideo=null;chunksVideo=[]}
+async function selecionarVideoGaleria(e){
+ const file=e.target.files?.[0];
+ if(!file||!ruaSelecionada||!rotaSelecionadaId){e.target.value="";return}
+ try{
+   document.getElementById("video-status").textContent="⏳ Verificando vídeo da galeria...";
+   const url=URL.createObjectURL(file);
+   const video=document.createElement("video");
+   video.preload="metadata";
+   video.muted=true;
+   const duracao=await new Promise((resolve,reject)=>{
+     video.onloadedmetadata=()=>resolve(Number(video.duration)||0);
+     video.onerror=()=>reject(new Error("Vídeo inválido ou não suportado"));
+     video.src=url;
+   });
+   URL.revokeObjectURL(url);
+   if(!duracao||duracao>30.5){
+     document.getElementById("video-status").textContent="⚠️ O vídeo da galeria precisa ter no máximo 30 segundos.";
+     e.target.value="";
+     return;
+   }
+   document.getElementById("video-status").textContent="⏳ Salvando vídeo da galeria...";
+   const mes=MES_ATUAL(),registroId=rotaSelecionadaId+"::"+mes+"::"+ruaSelecionada;
+   const blob=file.slice(0,file.size,file.type||"video/mp4");
+   await salvarVideoOffline({id:crypto.randomUUID(),registroId,rotaId:rotaSelecionadaId,rua:ruaSelecionada,mes,blob,duracao:Math.round(duracao),mimeType:file.type||"video/mp4",criadoEm:new Date().toISOString(),origem:"galeria"});
+   document.getElementById("video-status").textContent="✅ Vídeo da galeria salvo neste endereço ("+Math.round(duracao)+" s).";
+   await renderizarGaleria(registroId);
+ }catch(err){
+   document.getElementById("video-status").textContent="❌ Não foi possível salvar o vídeo da galeria.";
+   console.error(err);
+ }finally{e.target.value=""}
+}
 async function salvarVideoGravado(){
 const mime=gravador?.mimeType||chunksVideo[0]?.type||"video/webm",blob=new Blob(chunksVideo,{type:mime}),mes=MES_ATUAL(),registroId=rotaSelecionadaId+"::"+mes+"::"+ruaSelecionada;
 try{if(!blob.size)throw new Error("Vídeo vazio");await salvarVideoOffline({id:crypto.randomUUID(),registroId,rotaId:rotaSelecionadaId,rua:ruaSelecionada,mes,blob,duracao:segundosVideo,mimeType:mime,criadoEm:new Date().toISOString()});document.getElementById("video-status").textContent="✅ Vídeo salvo neste endereço ("+segundosVideo+" s).";await renderizarGaleria(registroId)}
