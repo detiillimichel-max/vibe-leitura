@@ -2,6 +2,7 @@ const map=L.map("map",{zoomControl:false}).setView([-23.1337,-46.3015],16);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
 let camadaDelineacao=null,rotaSelecionadaId=null,ruaSelecionada=null,fotosPendentes=[],midiaAtual=null,gravador=null,streamVideo=null,chunksVideo=[],timerVideo=null,segundosVideo=0;
 let rastreamentoAtivo=false,watchGpsId=null,trilhaGps=[],distanciaGps=0,ultimoGps=null,trilhaLayer=null,gpsMarker=null;
+let ordemRotaAtiva="original",analiseOrdemRota=null;
 let camadasRuasRota=[],geometriasRotaCache=null,camadasParadas=[],paradaEstado={ruaKey:null,rua:null,inicio:0,ultimo:null},selecaoRotaToken=0;
 const PARADA_DURACAO_MS=40000,PARADA_MAX_ACURACIA=60,PARADA_MAX_DISTANCIA_ROTA=35,PARADA_MAX_MOVIMENTO=20,PARADA_MAX_INTERVALO=20000;
 function gpsDist(a,b){const R=6371000,p=Math.PI/180,dLat=(b.lat-a.lat)*p,dLon=(b.lng-a.lng)*p,x=Math.sin(dLat/2)**2+Math.cos(a.lat*p)*Math.cos(b.lat*p)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
@@ -56,6 +57,7 @@ async function desenharRuasDaRota(id){
  const rota=bancoDeRotas[id];if(!rota)return;
  const ways=geometriasRotaCache?.id===id?geometriasRotaCache.ways:await buscarGeometriasOSM(id);
  geometriasRotaCache={id,ways};
+ calcularSugestaoOrdemRota(id);
   const porNome=new Map();
  ways.forEach(w=>{const atual=porNome.get(w.nameKey)||[];atual.push(w);porNome.set(w.nameKey,atual)});
  const bounds=[];
@@ -82,7 +84,7 @@ async function selecionarRota(id){
  const token=++selecaoRotaToken;
  const rota=bancoDeRotas[id];
  if(!rota)return;
- rotaSelecionadaId=id;ruaSelecionada=null;fotosPendentes=[];resetarParadaGps();document.getElementById("gaveta").classList.remove("modo-rua");document.getElementById("btn-voltar-lista").classList.remove("visivel");document.getElementById("painel-rua").classList.add("oculto");
+ rotaSelecionadaId=id;ruaSelecionada=null;fotosPendentes=[];resetarParadaGps();ordemRotaAtiva="original";analiseOrdemRota=null;atualizarControleOrdemRota();document.getElementById("gaveta").classList.remove("modo-rua");document.getElementById("btn-voltar-lista").classList.remove("visivel");document.getElementById("painel-rua").classList.add("oculto");
  document.getElementById("rua-nome").textContent=id;document.getElementById("rua-nome").style.color=rota.cor;
  document.getElementById("rota-badge").textContent=id+" • "+rota.ruas.length+" ENDEREÇOS";
  document.getElementById("rota-contador").textContent="⏳ Preparando rota...";
@@ -114,7 +116,49 @@ async function selecionarRota(id){
 
  garantirLocalizacao().catch(err=>console.warn("Localização:",err));
 }
-async function renderizarListaRuas(filtro=""){if(!rotaSelecionadaId)return;const rota=bancoDeRotas[rotaSelecionadaId],pontos=await obterProgressoRotaDaRota(rotaSelecionadaId,MES_ATUAL()),contagem=new Map();pontos.forEach(x=>contagem.set(x.ruaKey,(contagem.get(x.ruaKey)||0)+1));const termo=filtro.trim().toLowerCase(),lista=rota.ruas.filter(r=>r.toLowerCase().includes(termo)),c=document.getElementById("lista-ruas");c.innerHTML="";lista.forEach((rua,i)=>{const item=document.createElement("div");item.className="item-rua"+(rua===ruaSelecionada?" selecionada":"");const n=contagem.get(NORMALIZAR(rua))||0;item.innerHTML=`<span class="check">${n?"📍 "+n:"○"}</span><button>${String(i+1)}. ${rua}</button><button class="pin" title="Abrir navegação"><i data-lucide="map-pin"></i></button>`;item.querySelector("button").onclick=()=>selecionarRua(rua);item.querySelector(".pin").onclick=()=>abrirNavegacao(rua);c.appendChild(item)});lucide.createIcons();atualizarProgressoRota(rotaSelecionadaId)}
+function atualizarControleOrdemRota(){
+ const original=document.getElementById("ordem-original"),sugerida=document.getElementById("ordem-sugerida"),info=document.getElementById("ordem-rota-info");
+ if(!original||!sugerida||!info)return;
+ original.classList.toggle("ativo",ordemRotaAtiva==="original");
+ sugerida.classList.toggle("ativo",ordemRotaAtiva==="sugerida");
+ sugerida.disabled=!analiseOrdemRota?.suggested?.length;
+ sugerida.textContent=analiseOrdemRota?.optimized?"Usar sugestão OSM":"Calcular sugestão";
+ if(ordemRotaAtiva==="original")info.textContent="Ordem original cadastrada. Ela nunca é alterada.";
+ else info.textContent=analiseOrdemRota?.reason||"Aguardando GPS e geometrias OSM.";
+}
+function definirOrdemRota(tipo){
+ if(tipo==="sugerida"&&!analiseOrdemRota?.suggested?.length){
+  if(!geometriasRotaCache?.ways?.length||!ultimoGps){const info=document.getElementById("ordem-rota-info");if(info)info.textContent="Para calcular, aguarde as ruas OSM e a localização GPS.";return}
+  analiseOrdemRota=RouteOptimizer.analyze(bancoDeRotas[rotaSelecionadaId].ruas,geometriasRotaCache.ways,ultimoGps);
+ }
+ if(tipo==="sugerida"&&!analiseOrdemRota?.suggested?.length)return;
+ ordemRotaAtiva=tipo;atualizarControleOrdemRota();renderizarListaRuas(document.getElementById("busca-rua")?.value||"");
+}
+function calcularSugestaoOrdemRota(id){
+ const rota=bancoDeRotas[id],info=document.getElementById("ordem-rota-info");
+ analiseOrdemRota=null;ordemRotaAtiva="original";atualizarControleOrdemRota();
+ if(!rota||!geometriasRotaCache?.ways?.length||!ultimoGps){if(info)info.textContent="Sugestão indisponível: aguardando GPS e geometrias OSM.";return}
+ analiseOrdemRota=RouteOptimizer.analyze(rota.ruas,geometriasRotaCache.ways,ultimoGps);
+ const botao=document.getElementById("ordem-sugerida");
+ if(botao){botao.disabled=!analiseOrdemRota.suggested.length;botao.textContent=analiseOrdemRota.optimized?"Usar sugestão OSM":"Sugestão parcial"}
+ if(info)info.textContent=analiseOrdemRota.reason+" Cobertura: "+analiseOrdemRota.coveredStreets+"/"+rota.ruas.length+" ruas.";
+}
+async function renderizarListaRuas(filtro=""){
+ if(!rotaSelecionadaId)return;
+ const rota=bancoDeRotas[rotaSelecionadaId],pontos=await obterProgressoRotaDaRota(rotaSelecionadaId,MES_ATUAL()),contagem=new Map();
+ pontos.forEach(x=>contagem.set(x.ruaKey,(contagem.get(x.ruaKey)||0)+1));
+ const termo=filtro.trim().toLowerCase(),base=ordemRotaAtiva==="sugerida"&&analiseOrdemRota?.suggested?.length?analiseOrdemRota.suggested:rota.ruas;
+ const lista=base.filter(r=>r.toLowerCase().includes(termo)),c=document.getElementById("lista-ruas");c.innerHTML="";
+ lista.forEach((rua,i)=>{
+  const item=document.createElement("div");item.className="item-rua"+(rua===ruaSelecionada?" selecionada":"");
+  const n=contagem.get(NORMALIZAR(rua))||0;
+  item.innerHTML='<span class="check">'+(n?"📍 "+n:"○")+'</span><button></button><button class="pin" title="Abrir navegação"><i data-lucide="map-pin"></i></button>';
+  item.querySelector("button").textContent=(i+1)+". "+rua;
+  item.querySelector("button").onclick=()=>selecionarRua(rua);
+  item.querySelector(".pin").onclick=()=>abrirNavegacao(rua);c.appendChild(item);
+ });
+ lucide.createIcons();atualizarProgressoRota(rotaSelecionadaId);
+}
 function filtrarRuas(v){renderizarListaRuas(v)}
 function atualizarContador(){const e=document.getElementById("obs");document.getElementById("contador-obs").textContent=e.value.length}
 async function selecionarRua(rua){ruaSelecionada=rua;fotosPendentes=[];const gaveta=document.getElementById("gaveta");gaveta.classList.add("modo-rua");document.getElementById("btn-voltar-lista").classList.add("visivel");document.getElementById("painel-rua").classList.remove("oculto");document.getElementById("painel-rua-nome").textContent=rua;document.getElementById("rua-nome").textContent=rua;document.getElementById("status-salvo").textContent="";document.getElementById("foto-status").textContent="";document.getElementById("video-status").textContent="";document.getElementById("cam").value="";const id=rotaSelecionadaId+"::"+MES_ATUAL()+"::"+rua;const r=await obterRegistroOffline(id);document.getElementById("leitura").value=r?.leitura||"";document.getElementById("obs").value=r?.obs||"";atualizarContador();await renderizarGaleria(id)}
