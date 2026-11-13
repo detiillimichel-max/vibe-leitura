@@ -126,3 +126,10 @@
 .galeria-rota-card-info{padding:9px;font-size:11px;color:#cbd5e1;overflow-wrap:anywhere}
 .galeria-rota-vazio{grid-column:1/-1;padding:24px 12px;text-align:center;color:#9ca3af;border:1px dashed #394150;border-radius:12px}
 @media(min-width:650px){.galeria-rota-itens{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* Ações de inclusão direta na galeria da rota */
+.galeria-rota-acoes{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:14px 0 8px}
+.galeria-rota-acoes button{min-height:48px;border:1px solid #3b4654;border-radius:12px;background:#202833;color:#f8fafc;font-size:13px;font-weight:800;padding:10px 8px}
+.galeria-rota-acoes button:active{transform:scale(.98);background:#26394a}
+.status-midia-rota{min-height:20px;margin:6px 2px 12px;color:#aab4c2;font-size:12px}
+.status-midia-rota.sucesso{color:#4ade80}.status-midia-rota.erro{color:#f87171}
