@@ -30,6 +30,7 @@
     <button class="btn-fechar" onclick="fecharGaveta()">✕</button>
   </div>
   <input id="busca-rua" type="search" placeholder="🔎 Procurar rua nesta rota" oninput="filtrarRuas(this.value)">
+  <div id="controle-ordem-rota" class="controle-ordem-rota"><button type="button" class="ordem-btn ativo" id="ordem-original" onclick="definirOrdemRota('original')">Ordem original</button><button type="button" class="ordem-btn" id="ordem-sugerida" onclick="definirOrdemRota('sugerida')" disabled>Calcular sugestão</button></div><p id="ordem-rota-info" class="ordem-rota-info">A sequência cadastrada será preservada.</p>
   <div id="lista-ruas"></div>
   <div id="painel-rua" class="painel-rua oculto">
     <div class="painel-cabecalho">
