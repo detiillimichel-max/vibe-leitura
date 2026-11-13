@@ -1,4 +1,4 @@
-const CACHE_NAME="vibe-leitura-shell-v9";
+const CACHE_NAME="vibe-leitura-shell-v10";
 const SHELL=["./","./index.html","./css/style.css","./js/rotas-data.js","./js/db.js","./js/midias.js","./js/route-optimizer.js","./js/mapa.js","./manifest.json","./icon-192.png","./icon-512.png"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
