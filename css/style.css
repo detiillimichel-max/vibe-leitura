@@ -133,3 +133,10 @@
 .galeria-rota-acoes button:active{transform:scale(.98);background:#26394a}
 .status-midia-rota{min-height:20px;margin:6px 2px 12px;color:#aab4c2;font-size:12px}
 .status-midia-rota.sucesso{color:#4ade80}.status-midia-rota.erro{color:#f87171}
+
+/* Controle da sequência original e sugestão de percurso */
+.controle-ordem-rota{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 4px}
+.ordem-btn{min-height:42px;border:1px solid #343b45;border-radius:11px;background:#191d23;color:#dce2ea;font-size:12px;font-weight:800;padding:8px}
+.ordem-btn.ativo{background:#163d2b;border-color:#1c9b59;color:#72f0a6}
+.ordem-btn:disabled{opacity:.42}
+.ordem-rota-info{margin:4px 2px 10px;color:#9aa4b2;font-size:11px;line-height:1.4}
