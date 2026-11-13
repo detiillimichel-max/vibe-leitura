@@ -72,7 +72,7 @@ async function desenharRuasDaRota(id){
  });
  return bounds;
 }
-async function atualizarProgressoRota(id){const rota=bancoDeRotas[id];if(!rota)return;const pontos=await obterProgressoRotaDaRota(id,MES_ATUAL());const el=document.getElementById("rota-contador");if(el)el.textContent="Mês atual: "+MES_ATUAL()+" • "+pontos.length+" pontos de parada detectados";}
+async function atualizarProgressoRota(id){const rota=bancoDeRotas[id];if(!rota)return;const [pontos,estados]=await Promise.all([obterProgressoRotaDaRota(id,MES_ATUAL()),obterEstadosTrechosRota(id,MES_ATUAL())]);const feitos=estados.filter(x=>x.concluido).length,el=document.getElementById("rota-contador");if(el)el.textContent="Trechos: "+feitos+"/"+rota.ruas.length+" concluídos · "+(rota.ruas.length-feitos)+" pendentes · "+pontos.length+" paradas GPS";}
 function atualizarStatus(){const e=document.getElementById("status-offline");if(!navigator.onLine){e.textContent="● OFFLINE — DADOS LOCAIS";e.className="status-offline-mode"}else{e.textContent="● ONLINE";e.className="status-online"}}
 window.addEventListener("online",atualizarStatus);window.addEventListener("offline",atualizarStatus);
 function abrirMapa(){document.getElementById("tela-identidade").style.transform="translateY(-100%)";atualizarStatus();carregarTrilhaGps();desenharTrilhaGps();renderizarMenuRotas();setTimeout(()=>lucide.createIcons(),50);if(!rastreamentoAtivo)iniciarRastreamentoGps()}
