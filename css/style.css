@@ -140,3 +140,10 @@
 .ordem-btn.ativo{background:#163d2b;border-color:#1c9b59;color:#72f0a6}
 .ordem-btn:disabled{opacity:.42}
 .ordem-rota-info{margin:4px 2px 10px;color:#9aa4b2;font-size:11px;line-height:1.4}
+
+/* Progresso por rua/trecho */
+.item-rua .btn-trecho{flex:none;min-width:82px;border:1px solid #5b6470;border-radius:9px;background:#292f38;color:#dce4ed;text-align:center;font-size:10px;font-weight:900;padding:8px 5px}
+.item-rua .btn-trecho.feito{background:#123d2a;border-color:#1d9b5a;color:#72f0a6}
+.item-rua .btn-trecho.pendente{background:#252a31;color:#cbd5e1}
+.item-rua.trecho-concluido .nome-rua{text-decoration:line-through;text-decoration-color:#36d98a;color:#9ca3af}
+.item-rua .nome-rua{min-width:0;overflow-wrap:anywhere}
