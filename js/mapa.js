@@ -3,6 +3,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,att
 let camadaDelineacao=null,rotaSelecionadaId=null,ruaSelecionada=null,fotosPendentes=[],midiaAtual=null,gravador=null,streamVideo=null,chunksVideo=[],timerVideo=null,segundosVideo=0;
 let rastreamentoAtivo=false,watchGpsId=null,trilhaGps=[],distanciaGps=0,ultimoGps=null,trilhaLayer=null,gpsMarker=null;
 let ordemRotaAtiva="original",analiseOrdemRota=null;
+let estadosTrechosAtuais=new Map();
 let camadasRuasRota=[],geometriasRotaCache=null,camadasParadas=[],paradaEstado={ruaKey:null,rua:null,inicio:0,ultimo:null},selecaoRotaToken=0;
 const PARADA_DURACAO_MS=40000,PARADA_MAX_ACURACIA=60,PARADA_MAX_DISTANCIA_ROTA=35,PARADA_MAX_MOVIMENTO=20,PARADA_MAX_INTERVALO=20000;
 function gpsDist(a,b){const R=6371000,p=Math.PI/180,dLat=(b.lat-a.lat)*p,dLon=(b.lng-a.lng)*p,x=Math.sin(dLat/2)**2+Math.cos(a.lat*p)*Math.cos(b.lat*p)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
@@ -56,19 +57,18 @@ async function desenharRuasDaRota(id){
  limparCamadasRuas();
  const rota=bancoDeRotas[id];if(!rota)return;
  const ways=geometriasRotaCache?.id===id?geometriasRotaCache.ways:await buscarGeometriasOSM(id);
- geometriasRotaCache={id,ways};
- calcularSugestaoOrdemRota(id);
-  const porNome=new Map();
- ways.forEach(w=>{const atual=porNome.get(w.nameKey)||[];atual.push(w);porNome.set(w.nameKey,atual)});
+ geometriasRotaCache={id,ways};calcularSugestaoOrdemRota(id);
+ const estados=await obterEstadosTrechosRota(id,MES_ATUAL()),concluidos=new Set(estados.filter(x=>x.concluido).map(x=>x.ruaKey));
+ const porNome=new Map();ways.forEach(w=>{const atual=porNome.get(w.nameKey)||[];atual.push(w);porNome.set(w.nameKey,atual)});
  const bounds=[];
  rota.ruas.forEach(rua=>{
-   const key=NORMALIZAR(rua),achados=porNome.get(key)||[];
-   achados.forEach(w=>{
-     const base=L.polyline(w.geometry,{color:"#7b8088",weight:9,opacity:.24,lineCap:"round",lineJoin:"round"}).addTo(map);
-     const linha=L.polyline(w.geometry,{color:"#b7bcc3",weight:5,opacity:.95,dashArray:"12 10",lineCap:"round",lineJoin:"round"}).addTo(map);
-     linha.bindTooltip("⚪ "+rua+" — TRECHO DE ROTA",{sticky:true});
-     camadasRuasRota.push(base,linha);w.geometry.forEach(p=>bounds.push(p));
-   });
+  const key=NORMALIZAR(rua),feito=concluidos.has(key),achados=porNome.get(key)||[];
+  achados.forEach(w=>{
+   const cor=feito?"#20d879":"#b7bcc3",base=L.polyline(w.geometry,{color:feito?"#087b45":"#7b8088",weight:9,opacity:.32,lineCap:"round",lineJoin:"round"}).addTo(map);
+   const linha=L.polyline(w.geometry,{color:cor,weight:5,opacity:.96,dashArray:feito?null:"12 10",lineCap:"round",lineJoin:"round"}).addTo(map);
+   linha.bindTooltip((feito?"✓ ":"○ ")+rua+(feito?" — CONCLUÍDO":" — PENDENTE"),{sticky:true});
+   camadasRuasRota.push(base,linha);w.geometry.forEach(p=>bounds.push(p));
+  });
  });
  return bounds;
 }
@@ -145,19 +145,37 @@ function calcularSugestaoOrdemRota(id){
 }
 async function renderizarListaRuas(filtro=""){
  if(!rotaSelecionadaId)return;
- const rota=bancoDeRotas[rotaSelecionadaId],pontos=await obterProgressoRotaDaRota(rotaSelecionadaId,MES_ATUAL()),contagem=new Map();
+ const rota=bancoDeRotas[rotaSelecionadaId],pontos=await obterProgressoRotaDaRota(rotaSelecionadaId,MES_ATUAL()),estados=await obterEstadosTrechosRota(rotaSelecionadaId,MES_ATUAL()),contagem=new Map();
  pontos.forEach(x=>contagem.set(x.ruaKey,(contagem.get(x.ruaKey)||0)+1));
+ estadosTrechosAtuais=new Map(estados.map(x=>[x.ruaKey,x]));
  const termo=filtro.trim().toLowerCase(),base=ordemRotaAtiva==="sugerida"&&analiseOrdemRota?.suggested?.length?analiseOrdemRota.suggested:rota.ruas;
  const lista=base.filter(r=>r.toLowerCase().includes(termo)),c=document.getElementById("lista-ruas");c.innerHTML="";
  lista.forEach((rua,i)=>{
-  const item=document.createElement("div");item.className="item-rua"+(rua===ruaSelecionada?" selecionada":"");
-  const n=contagem.get(NORMALIZAR(rua))||0;
-  item.innerHTML='<span class="check">'+(n?"📍 "+n:"○")+'</span><button></button><button class="pin" title="Abrir navegação"><i data-lucide="map-pin"></i></button>';
-  item.querySelector("button").textContent=(i+1)+". "+rua;
-  item.querySelector("button").onclick=()=>selecionarRua(rua);
+  const key=NORMALIZAR(rua),feito=!!estadosTrechosAtuais.get(key)?.concluido,n=contagem.get(key)||0;
+  const item=document.createElement("div");item.className="item-rua"+(rua===ruaSelecionada?" selecionada":"")+(feito?" trecho-concluido":"");
+  item.innerHTML='<span class="check">'+(feito?"✓":(n?"📍 "+n:"○"))+'</span><button class="nome-rua"></button><button class="btn-trecho '+(feito?"feito":"pendente")+'" type="button"></button><button class="pin" title="Abrir navegação"><i data-lucide="map-pin"></i></button>';
+  item.querySelector(".nome-rua").textContent=(i+1)+". "+rua;
+  item.querySelector(".btn-trecho").textContent=feito?"Concluído":"Concluir";
+  item.querySelector(".nome-rua").onclick=()=>selecionarRua(rua);
+  item.querySelector(".btn-trecho").onclick=()=>alternarTrechoConcluido(rua);
   item.querySelector(".pin").onclick=()=>abrirNavegacao(rua);c.appendChild(item);
  });
- lucide.createIcons();atualizarProgressoRota(rotaSelecionadaId);
+ lucide.createIcons();atualizarResumoTrechosRota();atualizarProgressoRota(rotaSelecionadaId);
+}
+async function alternarTrechoConcluido(rua){
+ if(!rotaSelecionadaId||!rua)return;
+ const key=NORMALIZAR(rua),anterior=estadosTrechosAtuais.get(key),concluido=!anterior?.concluido;
+ const registro={id:rotaSelecionadaId+"::"+MES_ATUAL()+"::"+key,rotaId:rotaSelecionadaId,mes:MES_ATUAL(),rua,ruaKey:key,concluido,atualizadoEm:new Date().toISOString(),origem:"marcacao-manual"};
+ try{
+  await salvarEstadoTrechoRota(registro);
+  await renderizarListaRuas(document.getElementById("busca-rua")?.value||"");
+  if(geometriasRotaCache?.id===rotaSelecionadaId)await desenharRuasDaRota(rotaSelecionadaId);
+ }catch(err){console.error("Não foi possível salvar o trecho:",err);const el=document.getElementById("ordem-rota-info");if(el)el.textContent="Falha ao salvar o progresso deste trecho. Tente novamente."}
+}
+function atualizarResumoTrechosRota(){
+ const el=document.getElementById("rota-contador");if(!el||!rotaSelecionadaId)return;
+ const total=bancoDeRotas[rotaSelecionadaId].ruas.length,feitos=[...estadosTrechosAtuais.values()].filter(x=>x.concluido).length;
+ el.textContent="Trechos concluídos: "+feitos+" de "+total+" · Pendentes: "+Math.max(0,total-feitos);
 }
 function filtrarRuas(v){renderizarListaRuas(v)}
 function atualizarContador(){const e=document.getElementById("obs");document.getElementById("contador-obs").textContent=e.value.length}
